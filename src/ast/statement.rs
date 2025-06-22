@@ -1,7 +1,10 @@
 use dyn_clone::DynClone;
 use std::{any::Any, collections::VecDeque};
 
-use crate::data::vtype::*;
+use crate::{
+	data::vtype::*,
+	parser::token::Token
+};
 
 use super::expression::Expression;
 
@@ -22,7 +25,8 @@ pub enum StatementType
 
 pub trait StatementTrait: DynClone
 {
-	fn statement_type(&self) -> StatementType;
+	fn stype(&self) -> StatementType;
+	fn unparse(&self) -> VecDeque<Token>;
 	fn as_any(&self) -> &dyn Any; // for downcasting
 }
 
@@ -31,15 +35,22 @@ dyn_clone::clone_trait_object!(StatementTrait);
 #[derive(Clone)]
 pub struct FunctionDefineStatement
 {
+	tokens: VecDeque<Token>,
+
 	signature: FunctionSignature,
 	body: CompoundStatement
 }
 
 impl StatementTrait for FunctionDefineStatement
 {
-	fn statement_type(&self) -> StatementType
+	fn stype(&self) -> StatementType
 	{
 		StatementType::FunctionDefine
+	}
+
+	fn unparse(&self) -> VecDeque<Token>
+	{
+		self.tokens.clone()
 	}
 
 	fn as_any(&self) -> &dyn Any
@@ -50,9 +61,9 @@ impl StatementTrait for FunctionDefineStatement
 
 impl FunctionDefineStatement
 {
-	pub fn new(signature: FunctionSignature, body: CompoundStatement) -> Self
+	pub fn new(tokens: VecDeque<Token>, signature: FunctionSignature, body: CompoundStatement) -> Self
 	{
-		Self { signature, body }
+		Self { tokens, signature, body }
 	}
 
 	pub fn signature(&self) -> FunctionSignature
@@ -69,14 +80,21 @@ impl FunctionDefineStatement
 #[derive(Clone)]
 pub struct FunctionDeclareStatement
 {
+	tokens: VecDeque<Token>,
+
 	signature: FunctionSignature
 }
 
 impl StatementTrait for FunctionDeclareStatement
 {
-	fn statement_type(&self) -> StatementType
+	fn stype(&self) -> StatementType
 	{
 		StatementType::FunctionDeclare
+	}
+
+	fn unparse(&self) -> VecDeque<Token>
+	{
+		self.tokens.clone()
 	}
 
 	fn as_any(&self) -> &dyn Any
@@ -87,9 +105,9 @@ impl StatementTrait for FunctionDeclareStatement
 
 impl FunctionDeclareStatement
 {
-	pub fn new(signature: FunctionSignature) -> Self
+	pub fn new(tokens: VecDeque<Token>, signature: FunctionSignature) -> Self
 	{
-		Self { signature }
+		Self { tokens, signature }
 	}
 
 	pub fn signature(&self) -> FunctionSignature
@@ -101,14 +119,21 @@ impl FunctionDeclareStatement
 #[derive(Clone)]
 pub struct FunctionReturnStatement
 {
+	tokens: VecDeque<Token>,
+
 	expression: Option<Expression>
 }
 
 impl StatementTrait for FunctionReturnStatement
 {
-	fn statement_type(&self) -> StatementType
+	fn stype(&self) -> StatementType
 	{
 		StatementType::FunctionReturn
+	}
+
+	fn unparse(&self) -> VecDeque<Token>
+	{
+		self.tokens.clone()
 	}
 
 	fn as_any(&self) -> &dyn Any
@@ -119,9 +144,9 @@ impl StatementTrait for FunctionReturnStatement
 
 impl FunctionReturnStatement
 {
-	pub fn new(expression: Option<Expression>) -> Self
+	pub fn new(tokens: VecDeque<Token>, expression: Option<Expression>) -> Self
 	{
-		Self { expression }
+		Self { tokens, expression }
 	}
 
 	pub fn expression(&self) -> Option<Expression>
@@ -133,14 +158,21 @@ impl FunctionReturnStatement
 #[derive(Clone)]
 pub struct ExpressionStatement
 {
+	tokens: VecDeque<Token>,
+
 	expression: Expression
 }
 
 impl StatementTrait for ExpressionStatement
 {
-	fn statement_type(&self) -> StatementType
+	fn stype(&self) -> StatementType
 	{
 		StatementType::Expression
+	}
+
+	fn unparse(&self) -> VecDeque<Token>
+	{
+		self.tokens.clone()
 	}
 
 	fn as_any(&self) -> &dyn Any
@@ -151,9 +183,9 @@ impl StatementTrait for ExpressionStatement
 
 impl ExpressionStatement
 {
-	pub fn new(expression: Expression) -> Self
+	pub fn new(tokens: VecDeque<Token>, expression: Expression) -> Self
 	{
-		Self { expression }
+		Self { tokens, expression }
 	}
 
 	pub fn expression(&self) -> Expression
@@ -165,14 +197,21 @@ impl ExpressionStatement
 #[derive(Clone)]
 pub struct CompoundStatement
 {
+	tokens: VecDeque<Token>,
+
 	statements: VecDeque<Statement>
 }
 
 impl StatementTrait for CompoundStatement
 {
-	fn statement_type(&self) -> StatementType
+	fn stype(&self) -> StatementType
 	{
 		StatementType::Compound
+	}
+
+	fn unparse(&self) -> VecDeque<Token>
+	{
+		self.tokens.clone()
 	}
 
 	fn as_any(&self) -> &dyn Any
@@ -183,9 +222,9 @@ impl StatementTrait for CompoundStatement
 
 impl CompoundStatement
 {
-	pub fn new(statements: VecDeque<Statement>) -> Self
+	pub fn new(tokens: VecDeque<Token>, statements: VecDeque<Statement>) -> Self
 	{
-		Self { statements }
+		Self { tokens, statements }
 	}
 
 	pub fn statements(&self) -> VecDeque<Statement>
@@ -197,6 +236,8 @@ impl CompoundStatement
 #[derive(Clone)]
 pub struct DeclareStatement
 {
+	tokens: VecDeque<Token>,
+
 	vtype: VType,
 	identifier: u16,
 	expression: Expression
@@ -204,9 +245,14 @@ pub struct DeclareStatement
 
 impl StatementTrait for DeclareStatement
 {
-	fn statement_type(&self) -> StatementType
+	fn stype(&self) -> StatementType
 	{
 		StatementType::Declare
+	}
+
+	fn unparse(&self) -> VecDeque<Token>
+	{
+		self.tokens.clone()
 	}
 
 	fn as_any(&self) -> &dyn Any
@@ -217,9 +263,9 @@ impl StatementTrait for DeclareStatement
 
 impl DeclareStatement
 {
-	pub fn new(vtype: VType, identifier: u16, expression: Expression) -> Self
+	pub fn new(tokens: VecDeque<Token>, vtype: VType, identifier: u16, expression: Expression) -> Self
 	{
-		Self { vtype, identifier, expression }
+		Self { tokens, vtype, identifier, expression }
 	}
 
 	pub fn vtype(&self) -> VType
@@ -241,15 +287,22 @@ impl DeclareStatement
 #[derive(Clone)]
 pub struct AssignStatement
 {
+	tokens: VecDeque<Token>,
+
 	identifier: u16,
 	expression: Expression
 }
 
 impl StatementTrait for AssignStatement
 {
-	fn statement_type(&self) -> StatementType
+	fn stype(&self) -> StatementType
 	{
 		StatementType::Assign
+	}
+
+	fn unparse(&self) -> VecDeque<Token>
+	{
+		self.tokens.clone()
 	}
 
 	fn as_any(&self) -> &dyn Any
@@ -260,9 +313,9 @@ impl StatementTrait for AssignStatement
 
 impl AssignStatement
 {
-	pub fn new(identifier: u16, expression: Expression) -> Self
+	pub fn new(tokens: VecDeque<Token>, identifier: u16, expression: Expression) -> Self
 	{
-		Self { identifier, expression }
+		Self { tokens, identifier, expression }
 	}
 
 	pub fn identifier(&self) -> u16
@@ -279,14 +332,21 @@ impl AssignStatement
 #[derive(Clone)]
 pub struct PrintStatement
 {
+	tokens: VecDeque<Token>,
+	
 	expression: Expression
 }
 
 impl StatementTrait for PrintStatement
 {
-	fn statement_type(&self) -> StatementType
+	fn stype(&self) -> StatementType
 	{
 		StatementType::Print
+	}
+
+	fn unparse(&self) -> VecDeque<Token>
+	{
+		self.tokens.clone()
 	}
 
 	fn as_any(&self) -> &dyn Any
@@ -297,9 +357,9 @@ impl StatementTrait for PrintStatement
 
 impl PrintStatement
 {
-	pub fn new(expression: Expression) -> Self
+	pub fn new(tokens: VecDeque<Token>, expression: Expression) -> Self
 	{
-		Self { expression }
+		Self { tokens, expression }
 	}
 
 	pub fn expression(&self) -> Expression
@@ -321,7 +381,7 @@ impl Statement
 	// Token functions:
 	pub fn statement_type(&self) -> StatementType
 	{
-		self.statement.statement_type()
+		self.statement.stype()
 	}
 
 	// New functions:
@@ -330,44 +390,44 @@ impl Statement
 		Self { statement }
 	}
 
-	pub fn new_function_define(signature: FunctionSignature, body: CompoundStatement) -> Self
+	pub fn new_function_define(tokens: VecDeque<Token>, signature: FunctionSignature, body: CompoundStatement) -> Self
 	{
-		Self::new(Box::new(FunctionDefineStatement::new(signature, body)))
+		Self::new(Box::new(FunctionDefineStatement::new(tokens, signature, body)))
 	}
 
-	pub fn new_function_declare(signature: FunctionSignature) -> Self
+	pub fn new_function_declare(tokens: VecDeque<Token>, signature: FunctionSignature) -> Self
 	{
-		Self::new(Box::new(FunctionDeclareStatement::new(signature)))
+		Self::new(Box::new(FunctionDeclareStatement::new(tokens, signature)))
 	}
 
-	pub fn new_function_return(expression: Option<Expression>) -> Self
+	pub fn new_function_return(tokens: VecDeque<Token>, expression: Option<Expression>) -> Self
 	{
-		Self::new(Box::new(FunctionReturnStatement::new(expression)))
+		Self::new(Box::new(FunctionReturnStatement::new(tokens, expression)))
 	}
 
-	pub fn new_expression(expression: Expression) -> Self
+	pub fn new_expression(tokens: VecDeque<Token>, expression: Expression) -> Self
 	{
-		Self::new(Box::new(ExpressionStatement::new(expression)))
+		Self::new(Box::new(ExpressionStatement::new(tokens, expression)))
 	}
 
-	pub fn new_compound(statements: VecDeque<Statement>) -> Self
+	pub fn new_compound(tokens: VecDeque<Token>, statements: VecDeque<Statement>) -> Self
 	{
-		Self::new(Box::new(CompoundStatement::new(statements)))
+		Self::new(Box::new(CompoundStatement::new(tokens, statements)))
 	}
 	
-	pub fn new_declare(vtype: VType, identifier: u16, expression: Expression) -> Self
+	pub fn new_declare(tokens: VecDeque<Token>, vtype: VType, identifier: u16, expression: Expression) -> Self
 	{
-		Self::new(Box::new(DeclareStatement::new(vtype, identifier, expression)))
+		Self::new(Box::new(DeclareStatement::new(tokens, vtype, identifier, expression)))
 	}
 
-	pub fn new_assign(identifier: u16, expression: Expression) -> Self
+	pub fn new_assign(tokens: VecDeque<Token>, identifier: u16, expression: Expression) -> Self
 	{
-		Self::new(Box::new(AssignStatement::new(identifier, expression)))
+		Self::new(Box::new(AssignStatement::new(tokens, identifier, expression)))
 	}
 
-	pub fn new_print(expression: Expression) -> Self
+	pub fn new_print(tokens: VecDeque<Token>, expression: Expression) -> Self
 	{
-		Self::new(Box::new(PrintStatement::new(expression)))
+		Self::new(Box::new(PrintStatement::new(tokens, expression)))
 	}
 
 	// As function:
