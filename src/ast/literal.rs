@@ -5,7 +5,7 @@ use crate::data::vtype::VType;
 
 pub trait LiteralTrait: DynClone
 {
-	fn virtual_type(&self) -> VType;
+	fn vtype(&self) -> VType;
 	fn as_any(&self) -> &dyn Any;
 }
 
@@ -19,7 +19,7 @@ pub struct IntegerLiteral
 
 impl LiteralTrait for IntegerLiteral
 {
-	fn virtual_type(&self) -> VType
+	fn vtype(&self) -> VType
 	{
 		VType::Integer
 	}
@@ -46,7 +46,7 @@ pub struct BooleanLiteral
 
 impl LiteralTrait for BooleanLiteral
 {
-	fn virtual_type(&self) -> VType
+	fn vtype(&self) -> VType
 	{
 		VType::Boolean
 	}
@@ -76,9 +76,9 @@ pub struct Literal
 impl Literal
 {
 	// Token functions:
-	pub fn virtual_type(&self) -> VType
+	pub fn vtype(&self) -> VType
 	{
-		self.literal.virtual_type()
+		self.literal.vtype()
 	}
 
 	// New functions:
@@ -103,8 +103,3 @@ impl Literal
 		self.literal.as_any().downcast_ref::<T>()
 	}
 }
-
-
-
-
-
