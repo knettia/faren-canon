@@ -45,7 +45,7 @@ impl ExpressionTrait for LiteralExpression
 {
 	fn vtype(&self) -> VType
 	{
-		self.literal.virtual_type().clone()
+		self.literal.vtype().clone()
 	}
 
 	fn etype(&self) -> ExpressionType
