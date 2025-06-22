@@ -379,7 +379,7 @@ pub struct Statement
 impl Statement
 {
 	// Token functions:
-	pub fn statement_type(&self) -> StatementType
+	pub fn stype(&self) -> StatementType
 	{
 		self.statement.stype()
 	}

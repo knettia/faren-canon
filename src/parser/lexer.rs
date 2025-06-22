@@ -218,9 +218,9 @@ pub fn lex(data: String) -> VecDeque<Token>
 				}
 			}
 
-			unknown =>
+			_ =>
 			{
-				panic!("Unknown character `{unknown}`: line {line}, column {column}");
+				continue;
 			}
 		}
 	}

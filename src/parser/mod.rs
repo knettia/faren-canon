@@ -258,6 +258,12 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 	let mut operator_stack: Vec<Operator> = Vec::new();
 
 	let binding = parser_context.tokens.clone();
+
+	if binding.len() == 0
+	{
+		return None; // TODO: fix this issue with a more detailed error
+	}
+
  	let first_token = binding.front();
 
 	while let Some(token) = parser_context.tokens.pop_front()

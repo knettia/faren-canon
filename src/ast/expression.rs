@@ -71,7 +71,7 @@ impl LiteralExpression
 		Self { tokens, literal }
 	}
 
-	fn literal(&self) -> &Literal
+	pub fn literal(&self) -> &Literal
 	{
 		&self.literal
 	}
