@@ -177,7 +177,9 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 		}
 	}
 
-	fn apply_operator(op: Operator, stack: &mut Vec<Expression>)
+	let mut expr_tokens = VecDeque::new();
+
+	fn apply_operator(op: Operator, expr_tokens: &mut VecDeque<Token>, stack: &mut Vec<Expression>)
 	{
 		let rhs = stack.pop().expect("Missing RHS expression");
 		let lhs = stack.pop().expect("Missing LHS expression");
@@ -198,11 +200,14 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 				};
 
 				stack.push(Expression::new_arithmetic(
+					expr_tokens.clone(),
 					VType::Integer,
 					arith_op,
 					lhs,
 					rhs
 				));
+
+				expr_tokens.clear();
 			}
 
 			Eq | Neq | Gt | Gte | Lt | Lte =>
@@ -219,10 +224,13 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 				};
 
 				stack.push(Expression::new_comparison(
+					expr_tokens.clone(),
 					cmp_op,
 					lhs,
 					rhs
 				));
+
+				expr_tokens.clear();
 			}
 
 			And | Or =>
@@ -235,10 +243,13 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 				};
 
 				stack.push(Expression::new_boolean(
+					expr_tokens.clone(),
 					bool_op,
 					lhs,
 					rhs
 				));
+
+				expr_tokens.clear();
 			}
 		}
 	}
@@ -251,18 +262,24 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 
 	while let Some(token) = parser_context.tokens.pop_front()
 	{
+		expr_tokens.push_back(token.clone());
+
 		match token.get_type()
 		{
 			TokenType::IntegerLiteral =>
 			{
 				let lit = token.as_token::<IntegerLiteralToken>().unwrap().clone();
-				output_stack.push(Expression::new_literal(Literal::new_integer(lit.value())));
+				output_stack.push(Expression::new_literal(expr_tokens.clone(), Literal::new_integer(lit.value())));
+
+				expr_tokens.clear();
 			}
 
 			TokenType::BooleanLiteral =>
 			{
 				let lit = token.as_token::<BooleanLiteralToken>().unwrap().clone();
-				output_stack.push(Expression::new_literal(Literal::new_boolean(lit.value())));
+				output_stack.push(Expression::new_literal(expr_tokens.clone(), Literal::new_boolean(lit.value())));
+
+				expr_tokens.clear();
 			}
 
 			TokenType::Arithmetic =>
@@ -290,7 +307,7 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 
 					if should_apply
 					{
-						operator_stack.pop().map(|op| apply_operator(op, &mut output_stack));
+						operator_stack.pop().map(|op| apply_operator(op, &mut expr_tokens, &mut output_stack));
 					}
 					else
 					{
@@ -328,7 +345,7 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 
 					if should_apply
 					{
-						operator_stack.pop().map(|op| apply_operator(op, &mut output_stack));
+						operator_stack.pop().map(|op| apply_operator(op, &mut expr_tokens, &mut output_stack));
 					}
 					else
 					{
@@ -362,7 +379,7 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 
 					if should_apply
 					{
-						operator_stack.pop().map(|op| apply_operator(op, &mut output_stack));
+						operator_stack.pop().map(|op| apply_operator(op, &mut expr_tokens, &mut output_stack));
 					}
 					else
 					{
@@ -386,6 +403,8 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 
 						while let Some(next_token) = parser_context.tokens.pop_front()
 						{
+							expr_tokens.push_back(next_token.clone());
+
 							if next_token.get_type() == TokenType::Symbol
 							{
 								let sub_sym_token = next_token.as_token::<SymbolToken>().unwrap();
@@ -471,6 +490,8 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 				if name == "invoke"
 				{
 					let ident_token = next_token!(parser_context, ident_token, "an identifier token");
+					expr_tokens.push_back(ident_token.clone());
+
 					let func_name = expect_token_type!(
 						parser_context,
 						ident_token,
@@ -495,7 +516,9 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 
 					let return_type = func_sign.return_type().clone();
 					
-					let begin_token: Token = next_token!(parser_context, ident_token, "a symbol token");
+					let begin_token = next_token!(parser_context, ident_token, "a symbol token");
+					expr_tokens.push_back(begin_token.clone());
+
 					let begin_token = expect_token_type!(
 						parser_context,
 						begin_token,
@@ -519,6 +542,8 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 
 					while let Some(next_token) = parser_context.tokens.pop_front()
 					{
+						expr_tokens.push_back(next_token.clone());
+
 						if next_token.get_type() == TokenType::Symbol
 						{
 							let sub_sym_token = next_token.as_token::<SymbolToken>().unwrap();
@@ -550,11 +575,13 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 						);
 					}
 
-					let mut expressions_passed: VecDeque<VecDeque<Token>> = VecDeque::new();
+					let mut expressions_passed= VecDeque::new();
 					let mut current_expression = VecDeque::new();
 
 					while let Some(sub_token) = sub_tokens.pop_front()
 					{
+						expr_tokens.push_back(sub_token.clone());
+
 						if sub_token.get_type() == TokenType::Symbol
 						{
 							let sub_token = expect_token_type!(
@@ -619,7 +646,9 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 						passed_arguments.push_back(expr.unwrap());
 					}
 
-					let function_call_expr = Expression::new_function_call(return_type, func_name, passed_arguments);
+					let function_call_expr = Expression::new_function_call(expr_tokens.clone(), return_type, func_name, passed_arguments);
+					expr_tokens.clear();
+
 					output_stack.push(function_call_expr);
 				}
 				else
@@ -640,7 +669,9 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 	
 					let vtype = parser_context.symbols_table.lookup(&name).unwrap();
 
-					let var_ref_expr = Expression::new_variable(vtype.clone(), id);
+					let var_ref_expr = Expression::new_variable(expr_tokens.clone(), vtype.clone(), id);
+					expr_tokens.clear();
+
 					output_stack.push(var_ref_expr);
 				}
 			}
@@ -659,7 +690,7 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 
 	while let Some(op) = operator_stack.pop()
 	{
-		apply_operator(op, &mut output_stack);
+		apply_operator(op, &mut expr_tokens, &mut output_stack);
 	}
 
 	if output_stack.len() != 1
@@ -677,8 +708,12 @@ fn parse_expression(parser_context: &mut ParserContext) -> Option<Expression>
 
 fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Option<Statement>
 {
+	let mut tokens = VecDeque::new();
+
 	while let Some(t) = parser_context.tokens.pop_front()
 	{
+		tokens.push_back(t.clone());
+
 		match t.get_type()
 		{
 			token::TokenType::Symbol =>
@@ -695,12 +730,14 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 						t.sym()
 					);
 				}
-
+				
 				let mut depth = 1;
-				let mut sub_tokens: VecDeque<Token> = VecDeque::new();
-
+				let mut sub_tokens = VecDeque::new();
+				
 				while let Some(next_token) = parser_context.tokens.pop_front()
 				{
+					tokens.push_back(next_token.clone());
+
 					if next_token.get_type() == TokenType::Symbol
 					{
 						let sub_sym_token = next_token.as_token::<SymbolToken>().unwrap();
@@ -766,7 +803,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 				parser_context.errors.append(&mut sub_context.errors);
 				parser_context.symbols_table = sub_context.symbols_table;
 
-				let statement = Statement::new_compound(statements);
+				let statement = Statement::new_compound(tokens, statements);
 
 				return Some(statement);
 			},
@@ -787,6 +824,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 					}
 
 					let t_name = next_token!(parser_context, t, "an identifier token");
+					tokens.push_back(t_name.clone());
 
 					let func_name = expect_token_type!(
 						parser_context,
@@ -796,6 +834,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 					).name();
 
 					let t_sym = next_token!(parser_context, t_name, "a symbol token");
+					tokens.push_back(t_sym.clone());
 
 					let symbol = expect_token_type!(
 						parser_context,
@@ -819,6 +858,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 
 					while let Some(next_token) = parser_context.tokens.pop_front()
 					{
+						tokens.push_back(next_token.clone());
+
 						if next_token.get_type() == TokenType::Symbol
 						{
 							let sub_sym_token = next_token.as_token::<SymbolToken>().unwrap();
@@ -864,6 +905,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 							type_token = type_token_opt.unwrap();
 						}
 
+						tokens.push_back(type_token.clone());
+
 						let param_vtype = expect_token_type!(
 							parser_context,
 							type_token,
@@ -876,6 +919,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 
 						if maybe_comma_token.is_some()
 						{
+							tokens.push_back(maybe_comma_token.as_ref().unwrap().clone());
+							
 							let comma_token = expect_token_type!(
 								parser_context,
 								maybe_comma_token.as_ref().unwrap(),
@@ -896,6 +941,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 									sym
 								);
 							}
+							
 						}
 
 						parser_context.symbols_table.define(&param_id, param_vtype.clone());
@@ -909,6 +955,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 					}
 
 					let t_type_token = next_token!(parser_context, t_name, "a type token");
+					tokens.push_back(t_type_token.clone());
 
 					let vtype = expect_token_type!(
 						parser_context,
@@ -921,6 +968,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 					parser_context.symbols_table.define_function(&func_name, vtype.clone(), parameters.clone());
 
 					let next_token = next_token!(parser_context, t_name, "a symbol token");
+					tokens.push_back(next_token.clone());
+
 					let sym = expect_token_type!(
 						parser_context,
 						next_token,
@@ -936,7 +985,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 						{
 							parser_context.symbols_table.pop_scope();
 
-							let func_declare_statement = Statement::new_function_declare(func_sign);
+							let func_declare_statement = Statement::new_function_declare(tokens, func_sign);
 
 							return Some(func_declare_statement);
 						},
@@ -947,6 +996,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 							let result = parse_statement(parser_context, false);
 
 							let func_define_statement = Statement::new_function_define(
+								tokens,
 								func_sign,
 								result
 									.unwrap()
@@ -992,6 +1042,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 						{
 							break;
 						};
+
+						tokens.push_back(next_token.clone());
 
 						if next_token.get_type() == TokenType::Symbol
 						{
@@ -1043,7 +1095,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 						}
 					}
 
-					return Some(Statement::new_function_return(expr));
+					return Some(Statement::new_function_return(tokens, expr));
 				}
 				else if t.name() == "let"
 				{
@@ -1058,6 +1110,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 
 					// Variable declaration: let <name> <type> = <expr>;
 					let t_name = next_token!(parser_context, t, "an identifier token");
+					tokens.push_back(t_name.clone());
+
 					let i_name = expect_token_type!(
 						parser_context,
 						t_name,
@@ -1066,6 +1120,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 					).name();
 					
 					let t_type_token = next_token!(parser_context, t_name, "a type token");
+					tokens.push_back(t_type_token.clone());
+
 					let vtype = expect_token_type!(
 						parser_context,
 						t_type_token,
@@ -1085,6 +1141,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 					}
 						
 					let eq_token = next_token!(parser_context, t_type_token, "'=' after type token");
+					tokens.push_back(eq_token.clone());
+
 					let sym = expect_token_type!(
 						parser_context,
 						eq_token,
@@ -1107,6 +1165,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 
 					while let Some(next_token) = parser_context.tokens.front()
 					{
+						tokens.push_back(next_token.clone());
+
 						if next_token.get_type() == TokenType::Symbol
 						{
 							if let Some(sym_token) = next_token.as_token::<SymbolToken>()
@@ -1148,7 +1208,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 						);
 					}
 
-					let statement = Statement::new_declare(vtype, parser_context.symbols_table.get_id(&i_name).unwrap(), expr.unwrap());
+					let statement = Statement::new_declare(tokens, vtype, parser_context.symbols_table.get_id(&i_name).unwrap(), expr.unwrap());
 
 					return Some(statement);
 				}
@@ -1165,6 +1225,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 
 					// Variable assignment: set <name> = <expr>;
 					let t_name = next_token!(parser_context, t, "an identifier token");
+					tokens.push_back(t_name.clone());
+
 					let i_name = expect_token_type!(
 						parser_context,
 						t_name,
@@ -1187,6 +1249,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 					let id = id.unwrap();
 
 					let eq_token = next_token!(parser_context, t_name, "'=' after identifier token");
+					tokens.push_back(eq_token.clone());
+
 					let sym = expect_token_type!(
 						parser_context,
 						eq_token,
@@ -1209,6 +1273,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 
 					while let Some(next_token) = parser_context.tokens.front()
 					{
+						tokens.push_back(next_token.clone());
+
 						if next_token.get_type() == TokenType::Symbol
 						{
 							if let Some(sym_token) = next_token.as_token::<SymbolToken>()
@@ -1248,7 +1314,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 						);
 					}
 
-					let statement = Statement::new_assign(id, expr.unwrap());
+					let statement = Statement::new_assign(tokens, id, expr.unwrap());
 
 					return Some(statement);
 				}
@@ -1271,6 +1337,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 						{
 							break;
 						};
+
+						tokens.push_back(next_token.clone());
 
 						if next_token.get_type() == TokenType::Symbol
 						{
@@ -1313,7 +1381,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 						);
 					}
 
-					return Some(Statement::new_print(expr.unwrap()));
+					return Some(Statement::new_print(tokens, expr.unwrap()));
 				}
 				else if t.name() == "express"
 				{
@@ -1334,6 +1402,8 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 						{
 							break;
 						};
+
+						tokens.push_back(next_token.clone());
 
 						if next_token.get_type() == TokenType::Symbol
 						{
@@ -1376,7 +1446,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 						);
 					}
 
-					return Some(Statement::new_expression(expr.unwrap()));
+					return Some(Statement::new_expression(tokens, expr.unwrap()));
 				}
 				else
 				{
