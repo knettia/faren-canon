@@ -788,8 +788,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 					sub_context.symbols_table.push_scope();
 				}
 
-				let mut statements = VecDeque::new();
-
+				let mut statements = Vec::new();
 
 				while !sub_context.tokens.is_empty()
 				{
@@ -797,7 +796,7 @@ fn parse_statement(parser_context: &mut ParserContext, manage_scope: bool) -> Op
 
 					if result.is_some()
 					{
-						statements.push_back(result.unwrap());
+						statements.push(result.unwrap());
 					}
 				}
 

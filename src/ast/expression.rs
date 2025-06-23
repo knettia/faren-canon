@@ -86,7 +86,6 @@ pub struct FunctionCallExpression
 	passed_arguments: VecDeque<Expression>
 }
 
-
 impl ExpressionTrait for FunctionCallExpression
 {
 	fn vtype(&self) -> VType
@@ -360,12 +359,12 @@ pub struct Expression
 impl Expression
 {
 	// Token functions:
-	pub fn virtual_type(&self) -> VType
+	pub fn vtype(&self) -> VType
 	{
 		self.expression.vtype()
 	}
 
-	pub fn expression_type(&self) -> ExpressionType
+	pub fn etype(&self) -> ExpressionType
 	{
 		self.expression.etype()
 	}

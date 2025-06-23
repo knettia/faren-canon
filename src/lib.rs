@@ -28,7 +28,7 @@ mod tests
 		let statements = root.statements;
 		let func_define_statement = &statements[0];
 
-		assert_eq!(func_define_statement.statement_type(), StatementType::FunctionDefine);
+		assert_eq!(func_define_statement.stype(), StatementType::FunctionDefine);
 
 		let func_define_statement = func_define_statement.as_statement::<FunctionDefineStatement>().unwrap();
 		let func_sign = func_define_statement.signature();
@@ -51,7 +51,7 @@ mod tests
 		let statements = root.statements;
 		let func_declare_statement = &statements[0];
 
-		assert_eq!(func_declare_statement.statement_type(), StatementType::FunctionDeclare);
+		assert_eq!(func_declare_statement.stype(), StatementType::FunctionDeclare);
 
 		let func_declare_statement = func_declare_statement.as_statement::<FunctionDeclareStatement>().unwrap();
 		let func_sign = func_declare_statement.signature();

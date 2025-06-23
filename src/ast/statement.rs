@@ -66,14 +66,14 @@ impl FunctionDefineStatement
 		Self { tokens, signature, body }
 	}
 
-	pub fn signature(&self) -> FunctionSignature
+	pub fn signature(&self) -> &FunctionSignature
 	{
-		self.signature.clone()
+		&self.signature
 	}
 
-	pub fn body(&self) -> CompoundStatement
+	pub fn body(&self) -> &CompoundStatement
 	{
-		self.body.clone()
+		&self.body
 	}
 }
 
@@ -110,9 +110,9 @@ impl FunctionDeclareStatement
 		Self { tokens, signature }
 	}
 
-	pub fn signature(&self) -> FunctionSignature
+	pub fn signature(&self) -> &FunctionSignature
 	{
-		self.signature.clone()
+		&self.signature
 	}
 }
 
@@ -149,9 +149,9 @@ impl FunctionReturnStatement
 		Self { tokens, expression }
 	}
 
-	pub fn expression(&self) -> Option<Expression>
+	pub fn expression(&self) -> &Option<Expression>
 	{
-		self.expression.clone()
+		&self.expression
 	}
 }
 
@@ -188,9 +188,9 @@ impl ExpressionStatement
 		Self { tokens, expression }
 	}
 
-	pub fn expression(&self) -> Expression
+	pub fn expression(&self) -> &Expression
 	{
-		self.expression.clone()
+		&self.expression
 	}
 }
 
@@ -199,7 +199,7 @@ pub struct CompoundStatement
 {
 	tokens: VecDeque<Token>,
 
-	statements: VecDeque<Statement>
+	statements: Vec<Statement>
 }
 
 impl StatementTrait for CompoundStatement
@@ -222,14 +222,14 @@ impl StatementTrait for CompoundStatement
 
 impl CompoundStatement
 {
-	pub fn new(tokens: VecDeque<Token>, statements: VecDeque<Statement>) -> Self
+	pub fn new(tokens: VecDeque<Token>, statements: Vec<Statement>) -> Self
 	{
 		Self { tokens, statements }
 	}
 
-	pub fn statements(&self) -> VecDeque<Statement>
+	pub fn statements(&self) -> &Vec<Statement>
 	{
-		self.statements.clone()
+		&self.statements
 	}
 }
 
@@ -278,9 +278,9 @@ impl DeclareStatement
 		self.identifier
 	}
 
-	pub fn expression(&self) -> Expression
+	pub fn expression(&self) -> &Expression
 	{
-		self.expression.clone()
+		&self.expression
 	}
 }
 
@@ -323,9 +323,9 @@ impl AssignStatement
 		self.identifier
 	}
 
-	pub fn expression(&self) -> Expression
+	pub fn expression(&self) -> &Expression
 	{
-		self.expression.clone()
+		&self.expression
 	}
 }
 
@@ -362,9 +362,9 @@ impl PrintStatement
 		Self { tokens, expression }
 	}
 
-	pub fn expression(&self) -> Expression
+	pub fn expression(&self) -> &Expression
 	{
-		self.expression.clone()
+		&self.expression
 	}
 }
 
@@ -410,7 +410,7 @@ impl Statement
 		Self::new(Box::new(ExpressionStatement::new(tokens, expression)))
 	}
 
-	pub fn new_compound(tokens: VecDeque<Token>, statements: VecDeque<Statement>) -> Self
+	pub fn new_compound(tokens: VecDeque<Token>, statements: Vec<Statement>) -> Self
 	{
 		Self::new(Box::new(CompoundStatement::new(tokens, statements)))
 	}
